@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Document</title>
+	<style>
+	*{padding:0;margin:0;}
+	body{text-align:center;}
+	#c1{background:url(material/img/game_bg_2_hd.jpg) no-repeat;background-size:100%;margin-top:40px;}
+	</style>
+</head>
+<body>
+	<canvas id="c1" width="800" height = "600" style = "border:1px solid #999"></canvas>
+	<script>
+		var json = {};
+		function loadImage(arr,succ){
+				var count = 0;
+				for(var i=0;i<arr.length;i++){
+					(function(index){
+						var img = new Image();
+						img.onload = function(){
+							json[arr[index]] = img;
+							count++;
+							if(count >= arr.length){
+								succ();
+							}	
+						}
+						//console.log(img)
+						img.src = "material/img/"+arr[index]+".png";
+					})(i)	
+				}
+		}
+		var arr1 = ["fish1","fish2","fish3","fish4","fish5","cannon1","cannon2","cannon3","cannon4","cannon5","cannon6","cannon7","coinAni1","coinAni2","shark1","shark2","bottom","bullet","number_black","web","coinText"]
+		function atr(a){
+			return a * Math.PI / 180 ;
+		}
+		function ran(n,m){
+			return Math.round(Math.random()*(m - n) + n);
+		}
+		function rta(r){
+			return r * 180 / Math.PI;
+		}
+
+		function tran(num){
+			var arr = [];
+			while(num != 0){
+				var  r = num % 10;
+				num = (num - r ) /10;
+				arr.unshift(r);
+			}
+			var len = 6- arr.length;
+			if(len >0){
+				for(var i=0;i<len;i++){
+					arr.unshift(0)
+				}
+			}
+			return arr;
+		}
+	</script>
+	<script>
+		//鱼的生成
+		var FISH_SIZE=[
+			null,
+			{w: 55, h: 37, collR: 17},
+			{w: 78, h: 64, collR: 24},
+			{w: 72, h: 56, collR: 20},
+			{w: 77, h: 59, collR: 22},
+			{w: 107, h: 122, collR: 29}
+		];
+		function Fish(type){
+			this.type = type;
+			this.cur = 0;
+			this.x = -50 ;
+			this.y = ran(150,450);
+			// this.rotate = ran(-30,30);
+			this.speed = 1;
+			if(this.type > 10){
+				this.r = FISH_SIZE[this.type - 10].collR;
+			}else{
+				this.r = FISH_SIZE[this.type].collR;
+			}
+			
+			this.status = "live";
+			this.needDis = false;
+			this.move();
+		}
+		Fish.prototype.draw= function(brush){
+			var x = this.x;
+			var y = this.y;
+			var w = FISH_SIZE[this.type].w;
+			var h = FISH_SIZE[this.type].h;
+			brush.save();
+			brush.translate(x,y);
+			brush.rotate(atr(this.rotate));
+			//brush.scale(1,-1);
+			brush.drawImage(json["fish"+ this.type],0,this.cur * h,w,h,-w/2,-h/2,w,h);
+			brush.restore();
+		}
+		Fish.prototype.move = function(){
+			var _this = this;
+			this.timer = setInterval(function(){
+				_this.x += _this.speed*Math.cos(atr(_this.rotate));
+				_this.y += _this.speed*Math.sin(atr(_this.rotate));
+			},30)
+			this.time = setInterval(function(){
+				if(_this.status == "live"){
+					_this.cur++;
+					if(_this.cur == 4){
+						_this.cur = 0;
+					}
+				}else{
+					_this.cur++;
+					if(_this.cur==8){
+						_this.cur =5;
+						clearInterval(_this.timer);
+						clearInterval(_this.time);
+						_this.needDis = true;
+					}
+				}
+				
+			},150)
+		}
+		Fish.prototype.isDead = function(x,y){
+			var a = this.x - x;
+			var b = this.y - y;
+			c = Math.sqrt(a*a + b * b);
+			if(c < this.r){
+				return true;
+			}else{
+				return false;
+			}
+		}
+	</script>
+	<script>
+		//炮
+		var CANNON_SIZE=[
+	null,
+	{w: 74, h: 74},
+	{w: 74, h: 76},
+	{w: 74, h: 76},
+	{w: 74, h: 83},
+	{w: 74, h: 85},
+	{w: 74, h: 90},
+	{w: 74, h: 94}
+];
+		function Cannon(type){
+			this.type = type;
+			this.x = 426;
+			this.y = 570;
+			this.cur = 0;
+			this.rotate = 0;
+		}
+		Cannon.prototype.draw = function(brush){
+			this.w = CANNON_SIZE[this.type].w;
+			this.h = CANNON_SIZE[this.type].h;
+			brush.save();
+			brush.translate(this.x,this.y);
+			brush.rotate(atr(this.rotate))
+			brush.drawImage(json["cannon"+this.type],0,this.cur * this.h,this.w,this.h,-this.w/2,-this.h/2,this.w,this.h);
+			brush.restore();
+		}
+		Cannon.prototype.shoot = function(){
+			var _this = this;
+			clearInterval(this.timer);
+			this.timer = setInterval(function(){
+				_this.cur++;
+				if(_this.cur >= 5){
+					_this.cur = 0;
+					clearInterval(_this.timer)
+				}
+			},100)
+		}
+
+	</script>
+	<script>
+		//炮弹
+		var BULLET_SIZE=[
+	null,
+	{x: 86, y: 0, w: 24, h: 26},
+	{x: 62, y: 0, w: 25, h: 29},
+	{x: 30, y: 0, w: 31, h: 35},
+	{x: 32, y: 35, w: 27, h: 31},
+	{x: 30, y: 82, w: 29, h: 33},
+	{x: 0, y: 82, w: 30, h: 34},
+	{x: 0, y: 0, w: 30, h: 44}
+];
+		function Bullet(type){
+
+			this.type = type;
+			this.x = 426;
+			this.y = 570;
+			this.speed = 6;
+		}
+		Bullet.prototype.draw = function(brush){
+			var w = BULLET_SIZE[this.type].w;
+			var h = BULLET_SIZE[this.type].h;
+			var x = BULLET_SIZE[this.type].x;
+			var y = BULLET_SIZE[this.type].y;
+			brush.save();
+			brush.translate(this.x,this.y)
+			brush.rotate(atr(this.rotate));
+			//console.log(json["bullet"])
+			brush.drawImage(json["bullet"],x,y,w,h,-w/2,-h/2,w,h);
+			brush.restore();
+		}
+		Bullet.prototype.move = function(){
+			var _this = this;
+			this.timer = setInterval(function(){
+				_this.x += Math.sin(atr(_this.rotate)) * _this.speed;
+				_this.y -= Math.cos(atr(_this.rotate)) * _this.speed;
+				// console.log(_this.x,_this.y)
+			},16)
+
+
+		}
+	</script>
+	<script>
+		//金币产生
+		function Coin(type,x,y){
+			this.type = type;
+			this.x = x;
+			this.y = y ;
+			this.cur = 0;
+			this.speed = 20;
+			this.w = 60;
+			this.h = 60;
+			this.a = (this.x - 50)/10;
+			this.b = (550 - this.y)/10;
+			this.scale = 1;
+			this.needDis = false; 
+			this.turn();
+			this.move();
+		}
+		Coin.prototype.draw = function(brush){
+			brush.save();
+			brush.translate(this.x,this.y);
+			brush.scale(this.scale,this.scale);
+			brush.drawImage(json["coinAni"+this.type],0,this.cur * 60,this.w,this.h,-this.w/2,-this.h/2,this.w,this.h);
+			brush.restore();
+		}
+		Coin.prototype.turn = function(){
+			var _this = this;
+			this.timer = setInterval(function(){
+				_this.cur++;
+				if(_this.cur==10){
+					_this.cur=0;
+				}
+			},40)
+		}
+		Coin.prototype.move = function(){
+			var _this = this;
+
+			this.timer = setInterval(function(){
+				_this.x -= _this.a;
+				_this.y += _this.b;
+				_this.scale -= 0.05
+				if(_this.x <= 70&&_this.y >=530){
+					clearInterval(_this.timer);
+					_this.needDis = true;
+				}
+			},100)
+		}	
+
+	</script>
+	<script>
+		//调节炮筒的按钮
+var BUTTON_SIZE=[
+	null,
+	{x:3,y:74,w:36,h:28},
+	{x:46,y:74,w:36,h:28},
+	{x:90,y:74,w:36,h:28},
+	{x:134,y:74,w:36,h:28}
+];
+	function Button(type){
+		this.type = type;
+		this.x = 426;
+		this.y = 570;
+		this.w = BUTTON_SIZE[this.type].w;
+		this.h = BUTTON_SIZE[this.type].h;
+	}
+	Button.prototype.draw = function(brush){
+		var x = BUTTON_SIZE[this.type].x;
+		var y = BUTTON_SIZE[this.type].y;
+		brush.drawImage(json["bottom"],x,y,this.w,this.h,this.x,this.y,this.w,this.h);
+	}
+	Button.prototype.mousedown = function(cannonSize){
+		if(this.type == 1){
+			this.type++;;
+			cannonSize++;
+			if(cannonSize >= 8){
+				cannonSize = 7;
+			}
+		}else{
+			this.type++;
+			cannonSize--;
+			if(cannonSize ==0 ){
+				cannonSize = 1;
+			}	
+		}
+		return cannonSize;
+	}
+	Button.prototype.mouseup = function(){
+		this.type--;
+	}
+	</script>
+	<script>
+		//网
+		var WEB_SIZE = [
+	null,
+	{x:331,y:372,w:89,h:88},
+	{x:12,y:412,w:109,h:109},
+	{x:174,y:369,w:128,h:127},
+	{x:254,y:197,w:146,h:148},
+	{x:0,y:244,w:162,h:154},
+	{x:241,y:0,w:182,h:180},
+	{x:23,y:23,w:197,h:199}
+]
+	function Web(type){
+		this.type = type;
+		this.x = 0;
+		this.y = 0;
+		this.w = WEB_SIZE[this.type].w;
+		this.h = WEB_SIZE[this.type].h;
+		this.scale = 0.5;
+		this.needDis = false;
+		this.expand();
+	}
+	Web.prototype.draw = function(brush){
+		var x = WEB_SIZE[this.type].x;
+		var y = WEB_SIZE[this.type].y;
+		brush.save();
+		brush.translate(this.x,this.y)
+		brush.scale(this.scale,this.scale);
+		brush.drawImage(json["web"],x,y,this.w,this.h,-this.w/2,-this.h/2,this.w,this.h);
+		brush.restore();
+	}
+	Web.prototype.expand = function(){
+		var _this = this;
+		this.timer = setInterval(function(){
+			_this.scale += 0.05;
+			if(_this.scale > 1){
+				clearInterval(_this.timer);
+				_this.needDis = true;
+			}
+		},30)
+	}
+	</script>
+	<script>
+		//绘制积分
+		var INT_SIZE = [
+			null,
+			{x:24,y:576},
+			{x:46,y:576},
+			{x:68,y:576},
+			{x:90,y:576},
+			{x:112,y:576},
+			{x:134,y:576}
+		]
+		function Integration(type,num){
+			this.type = type;
+			this.num = num;
+			this.x = INT_SIZE[this.type].x;
+			this.y = INT_SIZE[this.type].y;
+		}
+		Integration.prototype.draw = function(brush){
+			brush.font = "bold 22px '微软雅黑'";
+			brush.textAlign = "left";
+			brush.textBaseline = "top";
+			brush.fillText(this.num,this.x,this.y);
+		}
+	</script>
+
+	<script>
+		//绘制此次的所得分数
+		function Score(type){
+			this.type = type;
+			this.x = 0;
+			this.y = 0;
+			this.step = 40;
+			this.needDis = false;
+			this.move();
+		}
+		Score.prototype.draw = function(brush){
+			brush.drawImage(json["coinText"],360,0,36,49,this.x,this.y,36,49);
+			if(this.type>=10){
+				var num1 = this.type%10;
+				var num2 = (this.type - num1)/10;
+				brush.drawImage(json["coinText"],num2 * 36,0,36,49,this.x + 40,this.y,36,49)
+				brush.drawImage(json["coinText"],num1 * 36,0,36,49,this.x + 80,this.y,36,49)
+			}else{
+				brush.drawImage(json["coinText"],this.type * 36,0,36,49,this.x + 40,this.y,36,49)
+			}	
+		}
+		Score.prototype.move = function(){
+			var  _this = this;
+			this.timer = setInterval(function(){
+				_this.y--;
+				_this.step--;
+				if(_this.step <=0){
+					clearInterval(_this.timer);
+					_this.needDis = true;
+				}
+			},16)
+		}
+	</script>
+	<script>
+		//关卡
+		function TwoLevel(){
+			this.x = 0;
+			this.y = 0;
+			this.needDis = false;
+			this.stay();
+		}
+		TwoLevel.prototype.draw = function(brush){
+			brush.font = "bold 60px '微软雅黑'";
+			brush.textAlign = "center";
+			brush.textBaseline = "middle";
+			brush.fillText("第二关",this.x,this.y);
+		}
+		TwoLevel.prototype.stay = function(){
+			var _this= this;
+			this.timer = setTimeout(function(){
+				_this.needDis = true;
+				console.log(100)
+			},4000)
+		}
+	</script>
+
+	<script>
+		//出鲨鱼
+		var SHARK_SIZE=[
+	null,
+	{w: 509, h: 270},
+	{w: 516, h: 273},
+];
+		function Shark(type){
+			Fish.call(this,type);
+			this.r = 50;
+		}
+		Shark.prototype = new Fish(2);
+		Shark.prototype.draw = function(brush){
+			var x = this.x;
+			var y = this.y;
+			var w = SHARK_SIZE[this.type - 10].w;
+			var h = SHARK_SIZE[this.type - 10].h;
+			brush.save();
+			brush.translate(x,y);
+			brush.rotate(atr(this.rotate));
+			//brush.scale(1,-1);
+			brush.drawImage(json["shark"+ (this.type- 10)],0,this.cur * h,w,h,-w/2,-h/2,w,h);
+			brush.restore();
+		}
+	</script>
+	<script>
+		window.onload = function(){
+			var oC = document.getElementById("c1");
+			var brush = oC.getContext("2d");
+			var rule = 0.01;
+			loadImage(arr1,function(){
+				var arrFish = [];
+				// var fish = new Fish(ran(1,5));
+				// 	arrFish.push(fish);
+				var  arrBullet = [];
+				;
+				var cannonSize = 7;
+				var cannon = null;
+				cannon = new Cannon(cannonSize);
+				var arrCoin = [];
+				var btn1 = new Button(1);
+				btn1.x = btn1.x -50 - btn1.w;
+				var btn2 = new Button(3);
+				btn2.x = btn2.x + 50;
+
+				var arrWeb = [];
+
+				var arrInt = [];
+
+				var intNum = 1000;
+
+				var arrShark = [];
+				var int = tran(intNum);
+				for(var i=0;i<int.length;i++){
+					var integration = new Integration(i + 1,int[i]);
+					arrInt.push(integration);
+				}
+
+				//得分
+				var arrScore = [];
+				//关卡
+				var level;
+
+				setInterval(function(){
+					brush.clearRect(0,0,oC.width,oC.height);
+
+					
+
+					if(Math.random() < rule){
+						var fish = new Fish(ran(1,5));
+						if(Math.random()<0.5){
+							fish.rotate = ran(150,240);
+							fish.x = oC.width+50;
+							fish.y = ran(150,oC.height - 150);
+						}else{
+							fish.rotate = ran(-30,30);
+							fish.x = -50;
+							fish.y = ran(150,oC.height - 150)
+						}
+						arrFish.push(fish);
+					}
+
+					//出鲨鱼
+					if(Math.random()<0.002 && rule == 0.02){
+						var shark = new Shark(ran(11,12));
+						shark.x =  -500;
+						shark.y = ran(150,oC.height - 150);
+						shark.rotate = ran(-30,30);
+						arrFish.push(shark);
+					}
+					for(var i=0;i<arrShark.length;i++){
+						arrShark[i].draw(brush);
+					}
+
+					for(var i=0;i<arrFish.length;i++){
+						arrFish[i].draw(brush);	
+					}
+
+					for(var i=0;i<arrBullet.length;i++){
+						arrBullet[i].draw(brush);
+					}
+					
+					
+					//判断鱼是否应该清除
+					for(var i=0;i<arrFish.length;i++){
+						if(arrFish[i].needDis){
+							arrFish.splice(i,1);
+							i--;
+						}
+					}
+					//检测炮弹是否击中鱼
+					for(var i=0;i<arrFish.length;i++){
+						for(var j=0;j<arrBullet.length;j++){
+							var x = arrBullet[j].x;
+							var y = arrBullet[j].y;
+							if(arrFish[i].isDead(x,y)&& arrFish[i].status =="live"){
+								//console.log("死啦");
+								var type = 0;
+								switch(arrFish[i].type){
+									case 1 :;
+									case 2 : type = 1;break;
+									case 3 : ;
+									case 4: ;
+									case 5 :;
+									case 11 : ;
+									case 12 : type = 2 ;break;
+									default:;
+								}
+								var coin = new Coin(type,arrFish[i].x,arrFish[i].y);
+								arrCoin.push(coin);
+
+								var web = new Web(cannonSize);
+								web.x = arrFish[i].x;
+								web.y = arrFish[i].y;
+								arrWeb.push(web);
+
+								die = true;
+								arrFish[i].status = "dead";
+								arrBullet.splice(j,1);
+								j--;
+
+
+								//出得的分数
+								var scr = 0;
+								switch(arrFish[i].type){
+									case 1 : scr = 3;break;
+									case 2 : scr = 6;break;
+									case 3 : scr = 10;break;
+									case 4:scr = 16;break;
+									case 5 :scr = 24;break;
+									case 11 : scr = 50;break;
+									case 12 : scr = 80;break;
+									default:;
+								}
+								intNum += scr;
+								//计入总分数
+								int = tran(intNum);
+								for(var j=0;j<int.length;j++){
+									arrInt[j].num = int[j];
+								}
+
+
+								var score = new Score(scr);
+								score.x = arrFish[i].x;
+								score.y = arrFish[i].y;
+								arrScore.push(score);
+							}
+						}
+					}
+
+					//判断炮弹是否击中鲨鱼
+					// for(var i=0;i<arrShark.length;i++){
+					// 	for(var j=0;j<arrBullet.length;j++){
+					// 		if(arrShark[i].isDead(arrBullet[j].x,arrBullet[j].y))
+					// 	}
+					// }
+					//硬币
+					for(var i=0;i<arrCoin.length;i++){
+						if(arrCoin[i].needDis){
+							arrCoin.splice(i--,1);
+						}else{
+							arrCoin[i].draw(brush);
+						}
+					}
+					//绘制网
+					for(var i=0;i<arrWeb.length;i++){
+						if(arrWeb[i].needDis){
+							arrWeb.splice(i--,1);
+						}else{
+							arrWeb[i].draw(brush);
+						}
+					}
+					
+					//清除硬币
+					//判断炮弹是否出界
+					for(var i=0;i<arrBullet.length;i++){
+						var x = arrBullet[i].x;
+						var y = arrBullet[i].y;
+						if(x< -50 ||x > oC.width + 50 || y< -50 ||y > oC.height + 50){
+							arrBullet.splice(i,1);
+							i--;
+						}
+					}
+					//判断鱼是否出界
+					for(var i=0;i<arrFish.length;i++){
+						if(arrFish[i].x<-600 || arrFish[i].x > 1400||arrFish[i].y<-500||arrFish.y>1100 ){
+							arrFish.splice(i--,1);
+						}
+					}
+
+										
+
+ 					brush.drawImage(json["bottom"],0,0,765,70,0,532,768,70);
+
+ 					cannon.draw(brush);
+ 					//绘制此次得分
+					for(var i=0;i<arrScore.length;i++){
+						if(arrScore[i].needDis){
+							arrScore.splice(i--,1);
+						}else{
+							arrScore[i].draw(brush);
+						}
+					}
+					//积分数
+					for(var i=0;i<arrInt.length;i++){
+						arrInt[i].draw(brush);
+					}
+
+					//换关卡
+					if(intNum > 1100 && (typeof level == "undefined")){
+						level = new TwoLevel();
+						level.x = oC.width/2;
+						level.y = oC.height/2;
+ 					}
+ 					if(level && !level.needDis){
+ 						level.draw(brush);
+ 						rule = 0.02
+ 					}
+
+ 					//绘制按钮
+
+					btn1.draw(brush);
+					btn2.draw(brush);
+				},16)
+				oC.onclick = function(e){
+					if((e.pageY - this.offsetTop)< 500){
+						var x = e.pageX - this.offsetLeft - cannon.x;
+						var y = cannon.y  + oC.offsetTop - e.pageY;
+						cannon.rotate =  rta(Math.atan2(x,y));
+						cannon.shoot();
+						var bullet = new Bullet(cannonSize);
+						bullet.rotate= cannon.rotate;
+						bullet.move()
+						arrBullet.push(bullet);
+						//每发出一个子弹，积分减一
+						intNum--;
+						int = tran(intNum);
+						for(var i=0;i<int.length;i++){
+							arrInt[i].num = int[i];
+						}
+					}	
+				}
+				oC.onmousedown = function(e){
+					//按钮的点击效果
+					var x1 = this.offsetLeft + 426 - 50 - btn1.w;
+					var y1 = this.offsetTop + 570;
+					if(e.pageX > x1 && e.pageX < x1 + btn1.w && e.pageY > y1 && e.pageY < y1 + btn1.h){
+						cannon = new Cannon(cannonSize);
+						cannonSize = btn1.mousedown(cannonSize);
+					}
+
+					var x2 = this.offsetLeft + 426 + 50;
+					var y2 = this.offsetTop + 570;
+					if(e.pageX > x2 && e.pageX < x2 + btn2.w && e.pageY > y2 && e.pageY < y2 + btn2.h){
+						cannonSize = btn2.mousedown(cannonSize);
+						cannon = new Cannon(cannonSize);
+					}
+				}
+				oC.onmouseup = function(){
+					if(btn1.type == 2){
+						btn1.mouseup();
+					}
+					if(btn2.type == 4){
+						btn2.mouseup();
+					}
+					
+				}
+			})
+		}
+	</script>
+</body>
+</html>
+
+
+
